@@ -12,10 +12,7 @@ import os
 
 
 def process_commit(commit, time_threshold, is_late, type_label):
-    commit_date = datetime.strptime(commit['date'], "%a %b %d %H:%M:%S %Y %z")
-    commit_time = commit_date.time()  # Extract commit time
-
-    commit_time_dt = datetime.combine(datetime.today(), commit_time)
+    commit_time_dt = datetime.combine(datetime.today(), commit['time'])
     threshold_time_dt = datetime.combine(datetime.today(), time_threshold)
 
     if is_late:
@@ -23,27 +20,25 @@ def process_commit(commit, time_threshold, is_late, type_label):
     else:
         time_diff = threshold_time_dt - commit_time_dt
 
-    # Update global variables
     global count_after_hours_commits, extra_estimated_time
     count_after_hours_commits += 1
     extra_estimated_time += time_diff
 
-    # Store commit details with type and commit time
     commit_details.append({
-        'Date': commit_date.replace(tzinfo=None),  # Make timezone naive
-        'Commit Time': commit_time,  # Include commit time
+        'Date': commit['date'].replace(tzinfo=None),
+        'Commit Time': commit['time'],
         'Estimated Extra Hours': str(time_diff),
         'Message': commit['message'],
-        'Type': type_label  # Indicate whether this is a late or early commit
+        'Type': type_label
     })
 
     # Print commit information
-    print(type_label)
-    print(f"Date: {commit_date}")
-    print(f"Commit Time: {commit_time}")
-    print(f"Diff: {time_diff}")
-    print(f"Message: {commit['message']}")
-    print('-' * 40)
+   # print(type_label)
+   # print(f"Date: {commit_date}")
+   # print(f"Commit Time: {commit_time}")
+   # print(f"Diff: {time_diff}")
+   # print(f"Message: {commit['message']}")
+   # print('-' * 40)
 
 def export_to_excel(export_data_to_excel):
     # Create DataFrame and export to Excel
@@ -70,14 +65,44 @@ commit_details = []  # To hold details for Excel export
 with open(commits_data_path, 'r', encoding='utf-8') as file:
     commits = json.load(file)
 
-for commit in commits:
-    commit_date = datetime.strptime(commit['date'], "%a %b %d %H:%M:%S %Y %z")
-    commit_time = commit_date.time()  # Extract commit time
 
-    if commit_time > time_threshold_end:
-        process_commit(commit, time_threshold_end, True, "Late")
-    elif commit_time < time_threshold_start:
-        process_commit(commit, time_threshold_start, False, "Early")
+df = pd.DataFrame(commits)
+df['date'] = pd.to_datetime(df['date'])
+df['month_day_year'] = df['date'].dt.strftime('%b %d %Y')
+df['time'] = df['date'].dt.time
+firsts_grouped_df = df.groupby(['month_day_year']).first().reset_index()
+filtered_df = firsts_grouped_df[firsts_grouped_df['time'] > time_threshold_end]
+
+
+# todo : make a diff column to the filtered_df
+# do the filtered_df['time'] - time_threshold_end
+# do the filtered_df['diff'].sum()
+
+
+# filtered_df['diff'] = pd.to_datetime(filtered_df['time']) - pd.to_datetime(time_threshold_end.strftime('%H:%M:%S', format='%H:%M:%S'))
+# create a column diff => filtered_df['time'] - time_threshold_end
+# print(filtered_df['diff'])
+print(filtered_df)
+
+# for index, commit in first_grouped_df.iterrows():
+#     commit_date = commit['month_day_year']
+#     commit_time = commit['time']
+#     print('\n ', commit_date)
+#     print('\n ', commit_time)
+#
+#     if commit_time > time_threshold_end:
+#         process_commit(commit, time_threshold_end, True, "Late")
+    # elif commit_time < time_threshold_start:
+    #     process_commit(commit, time_threshold_start, False, "Early")
+
+# for commit in commits:
+#     commit_date = datetime.strptime(commit['date'], "%a %b %d %H:%M:%S %Y %z")
+#     commit_time = commit_date.time()  # Extract commit time
+#
+#     if commit_time > time_threshold_end:
+#         process_commit(commit, time_threshold_end, True, "Late")
+#     elif commit_time < time_threshold_start:
+#         process_commit(commit, time_threshold_start, False, "Early")
 
 
 # Prepare total hours and minutes
@@ -85,9 +110,9 @@ total_hours = extra_estimated_time.total_seconds() // 3600
 total_minutes = (extra_estimated_time.total_seconds() % 3600) // 60
 
 
-print(f"\nTotal commits: {count_after_hours_commits} made after {time_threshold_end}.")
+print(f"\nTotal commits: {count_after_hours_commits} made after hours.")
 print(f"Total Extra Time: {int(total_hours)} hours and {int(total_minutes)} minutes")
 
-export_to_excel(export_data_to_excel)
+# export_to_excel(export_data_to_excel)
 
 

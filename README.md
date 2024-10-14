@@ -64,6 +64,12 @@ echo [ > commits.json &&
 git log branchName --author="YourGitAuthorName" --pretty=format:"{"commit": "%H", "author": "%an", "date": "%ad", "message": "%s"}," >> commits.json &&
 echo ] >> commits.json
 ```
+```
+echo [ > commits.json && git log yourBranchName --author="YourGitAuthorName" --pretty=format:"{\"commit\": \"%H\", \"author\": \"%an\", \"date\": \"%ad\", \"time\": \"%H:%M:%S\", \"message\": \"%s\"}," --date=format:"%d/%m/%Y" >> commits.json && echo ] >> commits.json
+
+```
+
+Validate JSON : https://jsonlint.com/
 
 - This command will create a file named `commits.json` in the current directory.
 - The JSON will contain the following information for each commit:
